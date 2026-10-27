@@ -48,9 +48,11 @@ done
 sudo tee rootfs/usr/local/bin/skidux-appearance >/dev/null <<'SCRIPT'
 #!/bin/sh
 # Keep Mint's functional Cinnamon desktop and make only appearance changes.
+gsettings set org.cinnamon.theme name 'SkidUX' 2>/dev/null || true
 gsettings set org.cinnamon.desktop.interface gtk-theme 'Mint-Y-Dark' 2>/dev/null || true
 gsettings set org.cinnamon.desktop.interface icon-theme 'Mint-Y' 2>/dev/null || true
 gsettings set org.cinnamon.desktop.background picture-uri 'file:///usr/share/backgrounds/skidux/skidux-neon.svg' 2>/dev/null || true
+gsettings set org.cinnamon.desktop.background picture-uri-dark 'file:///usr/share/backgrounds/skidux/skidux-neon.svg' 2>/dev/null || true
 SCRIPT
 sudo chmod 755 rootfs/usr/local/bin/skidux-appearance
 sudo tee rootfs/usr/local/bin/skidux-wallpapers >/dev/null <<'SCRIPT'
@@ -97,6 +99,71 @@ Terminal=false
 DESKTOP
 sudo cp rootfs/usr/share/applications/skidux-wallpapers.desktop rootfs/etc/skel/Desktop/SkidUX-Wallpapers.desktop
 sudo chmod 755 rootfs/etc/skel/Desktop/SkidUX-Wallpapers.desktop
+
+# Install native SkidUX desktop apps, not just a wallpaper.
+sudo install -m 0755 "$GITHUB_WORKSPACE/skidux-app.py" rootfs/usr/local/bin/skidux-app
+sudo mkdir -p rootfs/etc/xdg/autostart rootfs/usr/share/skidux rootfs/usr/share/themes/SkidUX/cinnamon rootfs/usr/share/icons/hicolor/scalable/apps
+sudo tee rootfs/usr/share/icons/hicolor/scalable/apps/skidux.svg >/dev/null <<'SKIDICON'
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="30" fill="#08152a"/><path d="M95 30H50C22 30 17 64 48 66H78C104 68 102 102 73 102H30" fill="none" stroke="#22e9f2" stroke-width="17" stroke-linecap="round"/><path d="M90 21L109 41M27 92L46 111" stroke="#e7fcff" stroke-width="8"/></svg>
+SKIDICON
+for app in home explorer browser store ai settings; do
+  case "$app" in
+    home) title="SkidUX Home"; category="Utility";;
+    explorer) title="Skid Explorer"; category="System";;
+    browser) title="Skid Browser"; category="Network";;
+    store) title="Skid Store"; category="System";;
+    ai) title="Skid AI"; category="Utility";;
+    settings) title="Skid Settings"; category="Settings";;
+  esac
+  sudo tee "rootfs/usr/share/applications/skidux-$app.desktop" >/dev/null <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=$title
+Exec=/usr/local/bin/skidux-app $app
+Icon=skidux
+Categories=$category;
+Terminal=false
+StartupNotify=true
+EOF
+done
+# Replace plain Mint Store launcher with the real SkidUX storefront.
+sudo tee rootfs/usr/share/applications/skidux-store.desktop >/dev/null <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Skid Store
+Exec=/usr/local/bin/skidux-app store
+Icon=skidux
+Categories=System;PackageManager;
+Terminal=false
+DESKTOP
+sudo tee rootfs/etc/xdg/autostart/skidux-dock.desktop >/dev/null <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=SkidUX Dock
+Exec=/usr/local/bin/skidux-app dock
+OnlyShowIn=X-Cinnamon;
+X-GNOME-Autostart-enabled=true
+Terminal=false
+DESKTOP
+# Do not replace Linux Mint's graphics, display manager, live account or installer.
+# Mint's existing theme is copied and recolored to retain working Cinnamon widgets.
+if [ -d rootfs/usr/share/themes/Mint-Y-Dark/cinnamon ]; then
+  sudo cp -a rootfs/usr/share/themes/Mint-Y-Dark/cinnamon/. rootfs/usr/share/themes/SkidUX/cinnamon/
+elif [ -d rootfs/usr/share/themes/Mint-Y/cinnamon ]; then
+  sudo cp -a rootfs/usr/share/themes/Mint-Y/cinnamon/. rootfs/usr/share/themes/SkidUX/cinnamon/
+fi
+if [ -f rootfs/usr/share/themes/SkidUX/cinnamon/cinnamon.css ]; then
+  sudo sed -i -e 's/#4a4a4a/#10253d/g' -e 's/#2b2b2b/#0b182d/g' -e 's/#383838/#10253d/g' rootfs/usr/share/themes/SkidUX/cinnamon/cinnamon.css
+fi
+sudo tee rootfs/usr/share/skidux/README.txt >/dev/null <<'TXT'
+SkidUX is a customized Linux Mint Cinnamon desktop.
+Skid Explorer is a local file manager with browsing, file opening, new folders and Trash.
+Skid Browser delegates web rendering and private browsing to Firefox.
+Skid Store integrates with Linux Mint Software Manager.
+Skid AI requires separately installed Ollama and a downloaded model.
+TXT
+
 # Deliberately preserve Mint's native installer, bootloader, casper settings, all applications and package manager.
 sudo mksquashfs rootfs filesystem.squashfs -noappend -comp xz -b 1M -processors 4 -quiet
 test -s filesystem.squashfs
