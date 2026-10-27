@@ -11,6 +11,20 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+      - name: Preflight SkidUX source, brand asset and build scripts
+        run: |
+          set -euo pipefail
+          bash -n build-skidux-mint.sh
+          bash -n skidux-system-overhaul.sh
+          python3 -m py_compile skidux-app.py
+          python3 - <<'PY'
+          import base64,pathlib
+          p=pathlib.Path("assets/official-skidux-logo.jpg.b64")
+          b=base64.b64decode(p.read_text().strip(),validate=True)
+          assert b.startswith(bytes.fromhex("ffd8")), "Missing JPEG SOI"
+          assert b.endswith(bytes.fromhex("ffd9")), "Missing JPEG EOI"
+          print("SkidUX official logo validated:",len(b),"bytes")
+          PY
       - name: Free disk space for Linux Mint image
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/hostedtoolcache /usr/local/share/powershell /usr/local/.ghcup || true
