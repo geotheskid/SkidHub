@@ -149,7 +149,7 @@ jobs:
             printf "%s\n" "https://dl-cdn.alpinelinux.org/alpine/v3.24/main" "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >/etc/apk/repositories
             apk update
             apk add --no-cache abuild alpine-conf git syslinux xorriso squashfs-tools grub mtools fakeroot busybox e2fsprogs openssl doas
-            git clone --branch 3.24-stable --depth 1 https://gitlab.alpinelinux.org/alpine/aports.git /work/aports
+            git clone --branch 3.24-stable --depth 1 https://github.com/alpinelinux/aports.git /work/aports
             cat > /work/aports/scripts/mkimg.skidux.sh <<"EOP"
           profile_skidux() {
             profile_standard
