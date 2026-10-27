@@ -14,7 +14,7 @@ curl --fail --location --retry 4 --retry-delay 5 -C - -o sha256sum.txt "$MIRROR/
 curl --fail --location --retry 4 --retry-delay 5 -C - -o "$ISO_NAME" "$MIRROR/$ISO_NAME"
 awk -v name="$ISO_NAME" '$2==name || $2=="*"name { print $1 "  " name; found=1 } END { if (!found) exit 1 }' sha256sum.txt | sha256sum -c -
 file "$ISO_NAME"
-xorriso -indev "$ISO_NAME" -find /casper -maxdepth 1 -type f -print | tee casper-files.txt
+xorriso -indev "$ISO_NAME" -ls /casper | tee casper-files.txt
 xorriso -indev "$ISO_NAME" -osirrox on -extract /casper/filesystem.squashfs filesystem-original.squashfs
 sudo unsquashfs -f -d rootfs filesystem-original.squashfs
 # Free disk before writing the new compressed image.
