@@ -1,0 +1,31 @@
+name: Build SkidUX Linux Mint Live ISO
+on:
+  push:
+    branches: [skidux-linuxmint]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  remaster:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space for Linux Mint image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/hostedtoolcache /usr/local/share/powershell /usr/local/.ghcup || true
+          sudo apt-get clean
+          df -h .
+      - name: Build complete Linux Mint-based SkidUX live ISO
+        run: bash build-skidux-mint.sh
+      - name: Upload ISO and verification details
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkidUX-LinuxMint-LIVE-ISO
+          path: |
+            dist/SkidUX_LinuxMint_LIVE_amd64.iso
+            dist/SkidUX_LinuxMint_LIVE_amd64.iso.sha256
+            dist/BOOT-REPORT.txt
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
