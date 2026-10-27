@@ -204,7 +204,7 @@ def call(which):
     if which in ("home","explorer","browser","store","ai","settings"):launch("skidux-app",which)
     elif which=="terminal":launch("gnome-terminal")
     elif which=="updates":launch("mintupdate")
-    elif which=="install":launch("ubiquity","--no-bootloader")
+    elif which=="install":launch("ubiquity")
 def main():
     which=sys.argv[1] if len(sys.argv)>1 else "home"
     if which=="dock":Dock();Gtk.main();return
