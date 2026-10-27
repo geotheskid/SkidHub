@@ -8,7 +8,7 @@ WORK="$PWD/work"
 mkdir -p "$OUT" "$WORK"
 printf '\nDisk space before preparation:\n'; df -h .
 sudo apt-get update -qq
-sudo apt-get install -y -qq xorriso squashfs-tools curl ca-certificates coreutils file python3-pil
+sudo apt-get install -y -qq xorriso squashfs-tools curl ca-certificates coreutils file python3-pil cpio initramfs-tools-core
 cd "$WORK"
 curl --fail --location --retry 4 --retry-delay 5 -C - -o sha256sum.txt "$MIRROR/sha256sum.txt"
 curl --fail --location --retry 4 --retry-delay 5 -C - -o "$ISO_NAME" "$MIRROR/$ISO_NAME"
@@ -178,7 +178,12 @@ test -s filesystem.squashfs
 printf '\nNew compressed root filesystem:\n'; ls -lh filesystem.squashfs
 # xorriso replay retains the official EFI/BIOS boot layout and volume label.
 # Overlay only label/appearance files; keep stock Mint EFI/BIOS boot binaries unchanged.
+# Change Plymouth early boot logo while retaining the original casper initramfs.
+bash "$GITHUB_WORKSPACE/skidux-patch-initrd.sh" "$ISO_NAME" "$WORK/rootfs" "$WORK"
 PATCH_ARGS=( -map "$WORK/filesystem.squashfs" /casper/filesystem.squashfs )
+if test -s "$WORK/skidux-initrd.lz"; then
+  PATCH_ARGS+=( -map "$WORK/skidux-initrd.lz" /casper/initrd.lz )
+fi
 PATCH_ARGS+=( -map "$WORK/skidux-grub.png" /boot/grub/skidux-background.png )
 for iso_path in /boot/grub/grub.cfg /isolinux/txt.cfg /isolinux/isolinux.cfg /isolinux/menu.cfg; do
   patch="$WORK/skidux-boot$iso_path"
