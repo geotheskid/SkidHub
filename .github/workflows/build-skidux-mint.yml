@@ -3,6 +3,9 @@ on:
   push:
     branches: [skidux-linuxmint]
   workflow_dispatch:
+concurrency:
+  group: skidux-linuxmint-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
