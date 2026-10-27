@@ -1,0 +1,6 @@
+#!/bin/sh
+pidfile="/run/user/$(id -u)/skidux-shell.pid"
+if [ -r "$pidfile" ]; then
+  pid=$(cat "$pidfile")
+  kill -USR1 "$pid" 2>/dev/null || true
+fi
