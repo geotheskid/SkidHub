@@ -35,6 +35,7 @@ for name,w,h in [("login",1920,1080),("grub",1024,768)]:
  bg.save(path,optimize=True)
 PY
 sudo cp "$BRAND/skidux-login.png" "$ROOT/usr/share/backgrounds/skidux/skidux-login.png"
+sudo cp "$BRAND/skidux-login.png" "$ROOT/usr/share/backgrounds/skidux/skidux-brand.png"
 # Brand Cinnamon's actual main menu applet without removing any other panel applets.
 sudo python3 - "$ROOT" <<'PY'
 import sys,json,pathlib
@@ -230,4 +231,23 @@ for path in /boot/grub/grub.cfg /isolinux/txt.cfg /isolinux/isolinux.cfg /isolin
   rm -f "$target"
  fi
 done
+# Customize the visible firmware boot menu while retaining all original menu entries
+# and kernel arguments for EFI/BIOS compatibility.
+grub="$WORK/skidux-boot/boot/grub/grub.cfg"
+if [ -s "$grub" ]; then
+  tmp="$grub.new"
+  cat > "$tmp" <<'EOF'
+insmod png
+insmod gfxterm
+set gfxmode=auto
+terminal_output gfxterm
+if background_image /boot/grub/skidux-background.png; then
+  set color_normal=white/black
+  set menu_color_normal=white/black
+  set menu_color_highlight=light-cyan/blue
+fi
+EOF
+  cat "$grub" >> "$tmp"
+  mv "$tmp" "$grub"
+fi
 echo 'SkidUX branded boot and hardware configuration prepared'
