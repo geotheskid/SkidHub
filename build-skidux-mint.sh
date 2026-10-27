@@ -51,14 +51,15 @@ sudo tee rootfs/usr/local/bin/skidux-appearance >/dev/null <<'SCRIPT'
 gsettings set org.cinnamon.theme name 'SkidUX' 2>/dev/null || true
 gsettings set org.cinnamon.desktop.interface gtk-theme 'Mint-Y-Dark' 2>/dev/null || true
 gsettings set org.cinnamon.desktop.interface icon-theme 'Mint-Y' 2>/dev/null || true
-gsettings set org.cinnamon.desktop.background picture-uri 'file:///usr/share/backgrounds/skidux/skidux-neon.svg' 2>/dev/null || true
-gsettings set org.cinnamon.desktop.background picture-uri-dark 'file:///usr/share/backgrounds/skidux/skidux-neon.svg' 2>/dev/null || true
+gsettings set org.cinnamon.desktop.background picture-uri 'file:///usr/share/backgrounds/skidux/skidux-brand.png' 2>/dev/null || true
+gsettings set org.cinnamon.desktop.background picture-uri-dark 'file:///usr/share/backgrounds/skidux/skidux-brand.png' 2>/dev/null || true
 SCRIPT
 sudo chmod 755 rootfs/usr/local/bin/skidux-appearance
 sudo tee rootfs/usr/local/bin/skidux-wallpapers >/dev/null <<'SCRIPT'
 #!/bin/sh
-choice=$(zenity --list --title='SkidUX Wallpapers' --text='Choose a wallpaper' --column=Wallpaper Neon Arctic Violet Cobalt) || exit 0
+choice=$(zenity --list --title='SkidUX Wallpapers' --text='Choose a wallpaper' --column=Wallpaper Brand Neon Arctic Violet Cobalt) || exit 0
 case "$choice" in
+ Brand) path=skidux-brand.png;;
  Neon) path=skidux-neon.svg;;
  Arctic) path=arctic.svg;;
  Violet) path=violet.svg;;
