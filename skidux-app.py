@@ -7,16 +7,16 @@ from gi.repository import Gtk,Gdk,GLib,Gio,Pango
 
 CSS = b"""
 * { font-family: 'DejaVu Sans', sans-serif; }
-window, .background { background-color:#081222; color:#e6f7ff; }
-headerbar { background:#101e36; color:#e6f7ff; border-bottom:1px solid #235a74; }
-button { background:#132942; border:1px solid #245579; border-radius:9px; color:#e6f7ff; padding:9px 13px; }
-button:hover { background:#14506a; border-color:#1ce1ee; }
+window, .background { background-color:rgba(6,16,32,0.96); color:#e6f7ff; }
+headerbar { background:rgba(12,29,52,0.94); color:#e6f7ff; border-bottom:1px solid #235a74; }
+button { background:rgba(17,42,68,0.88); border:1px solid rgba(53,151,175,0.52); border-radius:12px; color:#e9f8ff; padding:11px 14px; transition:150ms ease-out; }
+button:hover { background:rgba(26,103,129,0.91); border-color:#31f3fa; }
 entry, textview, scrolledwindow, treeview { background:#0b1a30; color:#d9faff; border-radius:7px; }
 label { color:#e6f7ff; }
 .title { font-size:30px; font-weight:700; color:#61efff; }
 .subtitle { color:#98bbd6; font-size:13px; }
-.card { background:#0c2139; border:1px solid #234d70; border-radius:15px; padding:18px; }
-.dock { background:#0a1b30; border-radius:18px; border:1px solid #237187; }
+.card { background:rgba(12,33,57,0.84); border:1px solid rgba(52,154,179,0.42); border-radius:18px; padding:18px; }
+.dock { background:rgba(5,17,32,0.89); border-radius:20px; border:1px solid rgba(43,174,206,0.55); box-shadow:0 6px 22px rgba(0,0,0,0.34); }
 """
 provider=Gtk.CssProvider();provider.load_from_data(CSS)
 Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(),provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -38,9 +38,22 @@ def hbox(spacing=8):
     return Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=spacing)
 def appwin(title,width=940,height=630):
     win=Gtk.Window(title="SkidUX  |  "+title);win.set_default_size(width,height)
-    win.set_border_width(18);win.connect("destroy",Gtk.main_quit);return win
+    win.set_border_width(18)
+    visual=win.get_screen().get_rgba_visual()
+    if visual and win.get_screen().is_composited():win.set_visual(visual)
+    win.connect("destroy",Gtk.main_quit);return win
 def header(title,subtitle):
-    b=vbox(4);b.pack_start(label(title,"title"),False,False,0);b.pack_start(label(subtitle,"subtitle"),False,False,0);return b
+    row=hbox(14)
+    icon="/usr/share/skidux/brand/skidux-logo.png"
+    if os.path.isfile(icon):
+        img=Gtk.Image.new_from_file(icon)
+        img.set_pixel_size(68)
+        row.pack_start(img,False,False,0)
+    b=vbox(4)
+    b.pack_start(label(title,"title"),False,False,0)
+    b.pack_start(label(subtitle,"subtitle"),False,False,0)
+    row.pack_start(b,True,True,0)
+    return row
 def run(win):win.show_all();Gtk.main()
 
 HOME=str(pathlib.Path.home())
@@ -169,6 +182,9 @@ class Settings:
             grid.attach(btn(n.replace("skidux-","").replace(".jpg","").replace(".svg","").title(),lambda x=n:self.wallpaper(x)),i%4,i//4,1,1)
         v.pack_start(btn("Display Settings",lambda:launch("cinnamon-settings","display")),False,False,0)
         v.pack_start(btn("Network Settings",lambda:launch("cinnamon-settings","network")),False,False,0)
+        v.pack_start(btn("Touchpad & Mouse",lambda:launch("cinnamon-settings","mouse")),False,False,0)
+        v.pack_start(btn("Input Diagnostics",lambda:launch("x-terminal-emulator","-e","sh","-c","skidux-input-report | less -R")),False,False,0)
+        v.pack_start(btn("Performance Overview",lambda:launch("x-terminal-emulator","-e","sh","-c","skidux-performance; read x")),False,False,0)
         v.pack_start(btn("Sound Settings",lambda:launch("cinnamon-settings","sound")),False,False,0)
         v.pack_start(btn("System Information",lambda:launch("cinnamon-settings","info")),False,False,0)
     def wallpaper(self,n):
@@ -189,7 +205,10 @@ class Dock:
     def __init__(self):
         self.win=Gtk.Window(type=Gtk.WindowType.TOPLEVEL);self.win.set_decorated(False);self.win.set_keep_above(True)
         self.win.set_skip_taskbar_hint(True);self.win.set_type_hint(Gdk.WindowTypeHint.DOCK)
-        self.win.set_resizable(False);self.win.connect("destroy",Gtk.main_quit)
+        self.win.set_resizable(False)
+        visual=self.win.get_screen().get_rgba_visual()
+        if visual and self.win.get_screen().is_composited():self.win.set_visual(visual)
+        self.win.connect("destroy",Gtk.main_quit)
         row=hbox(6);row.set_border_width(8);row.get_style_context().add_class("dock");self.win.add(row)
         for title,action in [("◈ SkidUX","home"),("▣ Explorer","explorer"),("◎ Browser","browser"),("▦ Store","store"),("✧ AI","ai"),("⚙ Settings","settings")]:
             row.pack_start(btn(title,lambda a=action:call(a)),False,False,0)
