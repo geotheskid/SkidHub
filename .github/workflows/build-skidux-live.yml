@@ -183,7 +183,7 @@ jobs:
           tar -c -C "$temp" etc usr | gzip -9n > "$host.apkovl.tar.gz"
           EOP
             chmod +x /work/aports/scripts/genapkovl-skidux.sh
-            abuild-keygen -a -i -n
+            abuild-keygen -a -n\n            cp /root/.abuild/*.rsa.pub /etc/apk/keys/
             export PACKAGER_PRIVKEY="$(find /root/.abuild -type f -name "*.rsa" | head -1)"
             test -n "$PACKAGER_PRIVKEY"
             cd /work/aports/scripts
