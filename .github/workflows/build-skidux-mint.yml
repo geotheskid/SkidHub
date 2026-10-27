@@ -18,6 +18,20 @@ jobs:
           df -h .
       - name: Build complete Linux Mint-based SkidUX live ISO
         run: bash build-skidux-mint.sh
+      - name: Boot ISO in QEMU and capture screen
+        continue-on-error: true
+        run: bash test-boot.sh dist/SkidUX_LinuxMint_LIVE_amd64.iso
+      - name: Upload boot-test screen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkidUX-Mint-VM-Boot-Evidence
+          path: |
+            dist/boot-test/screen.ppm
+            dist/boot-test/serial.log
+            dist/boot-test/qemu.log
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload ISO and verification details
         uses: actions/upload-artifact@v4
         with:
