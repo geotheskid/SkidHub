@@ -197,6 +197,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sudo chown -R "$(id -u):$(id -g)" output
           test -s output/SkidUX_LIVE_x86_64.iso
           file output/SkidUX_LIVE_x86_64.iso
           sha256sum output/SkidUX_LIVE_x86_64.iso > output/SkidUX_LIVE_x86_64.iso.sha256
