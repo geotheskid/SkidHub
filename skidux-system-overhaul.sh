@@ -35,6 +35,27 @@ for name,w,h in [("login",1920,1080),("grub",1024,768)]:
  bg.save(path,optimize=True)
 PY
 sudo cp "$BRAND/skidux-login.png" "$ROOT/usr/share/backgrounds/skidux/skidux-login.png"
+# Brand Cinnamon's actual main menu applet without removing any other panel applets.
+sudo python3 - "$ROOT" <<'PY'
+import sys,json,pathlib
+root=pathlib.Path(sys.argv[1])
+path=root/"usr/share/cinnamon/applets/menu@cinnamon.org/settings-override.json"
+path.parent.mkdir(parents=True,exist_ok=True)
+try:
+    data=json.loads(path.read_text()) if path.exists() else {}
+except Exception:
+    data={}
+data.update({
+    "menu-custom":{"default":True,"override-props":True},
+    "menu-label":{"default":"SkidUX","override-props":True},
+    "menu-icon":{"default":"/usr/share/icons/hicolor/256x256/apps/skidux.png",
+                 "default_icon":"/usr/share/icons/hicolor/256x256/apps/skidux.png",
+                 "override-props":True},
+    "menu-icon-size":{"default":28,"override-props":True}
+})
+path.write_text(json.dumps(data,indent=2)+"\n")
+PY
+
 sudo tee "$ROOT/etc/lightdm/slick-greeter.conf" >/dev/null <<'EOF'
 [Greeter]
 background=/usr/share/skidux/brand/skidux-login.png
