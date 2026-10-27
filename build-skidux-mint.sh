@@ -8,7 +8,7 @@ WORK="$PWD/work"
 mkdir -p "$OUT" "$WORK"
 printf '\nDisk space before preparation:\n'; df -h .
 sudo apt-get update -qq
-sudo apt-get install -y -qq xorriso squashfs-tools curl ca-certificates coreutils file
+sudo apt-get install -y -qq xorriso squashfs-tools curl ca-certificates coreutils file python3-pil
 cd "$WORK"
 curl --fail --location --retry 4 --retry-delay 5 -C - -o sha256sum.txt "$MIRROR/sha256sum.txt"
 curl --fail --location --retry 4 --retry-delay 5 -C - -o "$ISO_NAME" "$MIRROR/$ISO_NAME"
@@ -164,14 +164,28 @@ Skid Store integrates with Linux Mint Software Manager.
 Skid AI requires separately installed Ollama and a downloaded model.
 TXT
 
+# Apply the full SkidUX hardware/branding system pass to the remastered Linux Mint rootfs.
+bash "$GITHUB_WORKSPACE/skidux-system-overhaul.sh" "$WORK/rootfs" "$WORK" "$ISO_NAME"
+# The UI and firmware-compatible input modules should be physically present in the ISO.
+test -s rootfs/usr/local/bin/skidux-app
+test -s rootfs/usr/share/skidux/brand/skidux-logo.png
+test -s rootfs/etc/X11/xorg.conf.d/40-skidux-pointer.conf
+test -s rootfs/etc/lightdm/slick-greeter.conf
+
 # Deliberately preserve Mint's native installer, bootloader, casper settings, all applications and package manager.
 sudo mksquashfs rootfs filesystem.squashfs -noappend -comp xz -b 1M -processors 4 -quiet
 test -s filesystem.squashfs
 printf '\nNew compressed root filesystem:\n'; ls -lh filesystem.squashfs
 # xorriso replay retains the official EFI/BIOS boot layout and volume label.
+# Overlay only label/appearance files; keep stock Mint EFI/BIOS boot binaries unchanged.
+PATCH_ARGS=( -map "$WORK/filesystem.squashfs" /casper/filesystem.squashfs )
+PATCH_ARGS+=( -map "$WORK/skidux-grub.png" /boot/grub/skidux-background.png )
+for iso_path in /boot/grub/grub.cfg /isolinux/txt.cfg /isolinux/isolinux.cfg /isolinux/menu.cfg; do
+  patch="$WORK/skidux-boot$iso_path"
+  if test -s "$patch"; then PATCH_ARGS+=( -map "$patch" "$iso_path" ); fi
+done
 xorriso -indev "$ISO_NAME" -outdev "$OUT/SkidUX_LinuxMint_LIVE_amd64.iso" \
-  -map "$WORK/filesystem.squashfs" /casper/filesystem.squashfs \
-  -boot_image any replay
+  "${PATCH_ARGS[@]}" -boot_image any replay
 test -s "$OUT/SkidUX_LinuxMint_LIVE_amd64.iso"
 file "$OUT/SkidUX_LinuxMint_LIVE_amd64.iso"
 xorriso -indev "$OUT/SkidUX_LinuxMint_LIVE_amd64.iso" -report_el_torito plain | tee "$OUT/BOOT-REPORT.txt"
