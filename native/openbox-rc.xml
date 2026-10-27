@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+ <resistance><strength>10</strength><screen_edge_strength>20</screen_edge_strength></resistance>
+ <focus><focusNew>yes</focusNew><followMouse>no</followMouse><raiseOnFocus>no</raiseOnFocus></focus>
+ <placement><policy>Smart</policy><center>yes</center></placement>
+ <theme><name>SkidUX</name><titleLayout>NLIMC</titleLayout><keepBorder>yes</keepBorder><animateIconify>yes</animateIconify></theme>
+ <desktops><number>4</number><firstdesk>1</firstdesk><names><name>Workspace 1</name><name>Workspace 2</name><name>Workspace 3</name><name>Workspace 4</name></names></desktops>
+ <keyboard>
+  <keybind key="A-F4"><action name="Close"/></keybind>
+  <keybind key="A-Tab"><action name="NextWindow"><finalactions><action name="Focus"/><action name="Raise"/></finalactions></action></keybind>
+  <keybind key="W-space"><action name="Execute"><command>/usr/local/bin/skidux-launch-menu</command></action></keybind>
+  <keybind key="W-Return"><action name="Execute"><command>skidux-app terminal</command></action></keybind>
+  <keybind key="W-e"><action name="Execute"><command>skidux-app explorer</command></action></keybind>
+  <keybind key="W-b"><action name="Execute"><command>skidux-app browser</command></action></keybind>
+  <keybind key="C-A-Left"><action name="DesktopLeft"/></keybind>
+  <keybind key="C-A-Right"><action name="DesktopRight"/></keybind>
+ </keyboard>
+ <mouse><dragThreshold>8</dragThreshold><doubleClickTime>250</doubleClickTime>
+  <context name="Frame"><mousebind button="A-Left" action="Drag"><action name="Move"/></mousebind></context>
+  <context name="Desktop"><mousebind button="Right" action="Press"><action name="Execute"><command>/usr/local/bin/skidux-launch-menu</command></action></mousebind></context>
+ </mouse>
+ <applications><application class="*"><decor>yes</decor></application></applications>
+</openbox_config>
