@@ -1,0 +1,206 @@
+name: Build SkidUX Live ISO
+on:
+  push:
+    branches: [skidux-live-build]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare SkidUX files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p overlay/etc/init.d overlay/etc/lightdm/lightdm.conf.d overlay/etc/xdg/autostart overlay/etc/skel/Desktop overlay/usr/local/bin overlay/usr/share/backgrounds/skidux overlay/usr/share/applications output
+          cat > overlay/etc/init.d/skidux-live-user <<'EOT'
+          #!/sbin/openrc-run
+          description="Create the SkidUX live desktop user"
+          depend() {
+            need localmount
+            before lightdm
+          }
+          start() {
+            ebegin "Preparing SkidUX desktop"
+            id skidux >/dev/null 2>&1 || adduser -D -h /home/skidux -s /bin/ash skidux
+            addgroup skidux video 2>/dev/null || true
+            addgroup skidux audio 2>/dev/null || true
+            addgroup skidux input 2>/dev/null || true
+            addgroup skidux netdev 2>/dev/null || true
+            mkdir -p /home/skidux/Desktop /home/skidux/.config
+            cp -rn /etc/skel/. /home/skidux/ 2>/dev/null || true
+            chown -R skidux:skidux /home/skidux
+            eend 0
+          }
+          EOT
+          chmod +x overlay/etc/init.d/skidux-live-user
+          cat > overlay/etc/lightdm/lightdm.conf.d/60-skidux-live.conf <<'EOT'
+          [Seat:*]
+          autologin-user=skidux
+          autologin-user-timeout=0
+          user-session=xfce
+          EOT
+          cat > overlay/usr/local/bin/skidux-store <<'EOT'
+          #!/bin/sh
+          if command -v zenity >/dev/null 2>&1; then
+            choice=$(zenity --list --title="SkidUX Store" --text="Browse and manage installed software. Online installs require internet." --column="Section" "Search for applications" "Update installed packages" "Installed applications" 2>/dev/null) || exit 0
+            case "$choice" in
+              "Search for applications") 
+                term=$(zenity --entry --title="SkidUX Store" --text="Search Alpine Linux applications:") || exit 0
+                xfce4-terminal --hold -x sh -c 'apk search "$1"; echo "Press Enter to close"; read x' sh "$term" ;;
+              "Update installed packages") xfce4-terminal --hold -x sh -c 'echo "Updates require root permissions and network"; echo "Run: doas apk update && doas apk upgrade"; exec sh' ;;
+              "Installed applications") xfce4-terminal --hold -x sh -c 'apk info; exec sh' ;;
+            esac
+          else
+            exec xfce4-terminal --hold -x sh -c 'apk search firefox; exec sh'
+          fi
+          EOT
+          cat > overlay/usr/local/bin/skidux-install <<'EOT'
+          #!/bin/sh
+          exec xfce4-terminal --hold -x doas setup-alpine
+          EOT
+          cat > overlay/usr/local/bin/skidux-ai <<'EOT'
+          #!/bin/sh
+          if command -v zenity >/dev/null 2>&1; then
+            zenity --info --title="Skid AI" --text="Skid AI is an optional local-model frontend. No AI model is bundled in this ISO. Install and configure a compatible backend before offline AI chat can work." --width=480
+          else
+            exec xfce4-terminal --hold -x sh -c 'echo "Skid AI requires an installed local model backend."; read x'
+          fi
+          EOT
+          chmod +x overlay/usr/local/bin/skidux-*
+          cat > overlay/usr/share/applications/skidux-store.desktop <<'EOT'
+          [Desktop Entry]
+          Name=Skid Store
+          Comment=Browse Alpine Linux applications
+          Type=Application
+          Exec=skidux-store
+          Icon=system-software-install
+          Categories=System;
+          Terminal=false
+          EOT
+          cat > overlay/usr/share/applications/skidux-ai.desktop <<'EOT'
+          [Desktop Entry]
+          Name=Skid AI
+          Type=Application
+          Exec=skidux-ai
+          Icon=utilities-terminal
+          Categories=Utility;
+          Terminal=false
+          EOT
+          cat > overlay/etc/skel/Desktop/Install\ SkidUX.desktop <<'EOT'
+          [Desktop Entry]
+          Name=Install SkidUX
+          Type=Application
+          Exec=skidux-install
+          Icon=drive-harddisk
+          Terminal=false
+          EOT
+          chmod +x overlay/etc/skel/Desktop/*
+          cat > overlay/etc/skel/Desktop/Skid\ Store.desktop <<'EOT'
+          [Desktop Entry]
+          Name=Skid Store
+          Type=Application
+          Exec=skidux-store
+          Icon=system-software-install
+          Terminal=false
+          EOT
+          chmod +x overlay/etc/skel/Desktop/*
+          cat > overlay/etc/xdg/autostart/skidux-appearance.desktop <<'EOT'
+          [Desktop Entry]
+          Type=Application
+          Name=SkidUX Desktop Appearance
+          Exec=/usr/local/bin/skidux-appearance
+          OnlyShowIn=XFCE;
+          EOT
+          cat > overlay/usr/local/bin/skidux-appearance <<'EOT'
+          #!/bin/sh
+          sleep 4
+          xfconf-query -c xsettings -p /Net/ThemeName -n -t string -s Adwaita-dark 2>/dev/null || true
+          xfconf-query -c xfce4-desktop -lv 2>/dev/null | awk '$1 ~ /\/(last-image|image-path)$/ {print $1}' | while read -r key; do
+            xfconf-query -c xfce4-desktop -p "$key" -s /usr/share/backgrounds/skidux/neon.svg 2>/dev/null || true
+          done
+          EOT
+          chmod +x overlay/usr/local/bin/skidux-appearance
+          cat > overlay/usr/share/backgrounds/skidux/neon.svg <<'EOT'
+          <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+          <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#020714"/><stop offset=".55" stop-color="#0b2244"/><stop offset="1" stop-color="#020611"/></linearGradient><linearGradient id="glow" x2="1" y2="0"><stop stop-color="#1beef0"/><stop offset="1" stop-color="#2360ff"/></linearGradient></defs>
+          <rect width="1920" height="1080" fill="url(#bg)"/>
+          <g stroke="url(#glow)" fill="none" stroke-width="7" opacity=".65"><path d="M0 860 Q450 540 920 880 T1920 730"/><path d="M0 905 Q490 580 900 922 T1920 770"/></g>
+          <text x="140" y="370" fill="#e7fbff" font-family="sans-serif" font-weight="bold" font-size="142">SkidUX</text>
+          <text x="148" y="420" fill="#42d6f0" font-family="sans-serif" letter-spacing="12" font-size="26">OPERATING SYSTEM</text>
+          <text x="150" y="465" fill="#90abc6" font-family="sans-serif" font-size="24">FREEDOM • PERFORMANCE • CUSTOMIZATION</text>
+          </svg>
+          EOT
+          cat > overlay/etc/doas.conf <<'EOT'
+          permit nopass skidux as root
+          EOT
+          cat > overlay/etc/skidux-live-marker <<'EOT'
+          SkidUX live image — volatile session; disk installation is optional.
+          EOT
+      - name: Build bootable hybrid ISO with Alpine mkimage
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --privileged -v "$PWD:/work" -w /work alpine:3.24 /bin/sh -ec '
+            set -eu
+            printf "%s\n" "https://dl-cdn.alpinelinux.org/alpine/v3.24/main" "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >/etc/apk/repositories
+            apk update
+            apk add --no-cache abuild alpine-conf git syslinux xorriso squashfs-tools grub mtools fakeroot busybox e2fsprogs openssl doas
+            git clone --branch 3.24-stable --depth 1 https://gitlab.alpinelinux.org/alpine/aports.git /work/aports
+            cat > /work/aports/scripts/mkimg.skidux.sh <<"EOP"
+          profile_skidux() {
+            profile_standard
+            profile_abbrev="skidux"
+            image_name="SkidUX"
+            output_filename="SkidUX_LIVE_x86_64.iso"
+            title="SkidUX Live"
+            desc="SkidUX Linux live desktop and optional installer"
+            arch="x86_64"
+            hostname="skidux"
+            apkovl="genapkovl-skidux.sh"
+            kernel_flavors="lts"
+            apks="$apks alpine-base alpine-conf doas eudev eudev-openrc elogind elogind-openrc dbus dbus-openrc xorg-server xf86-input-libinput mesa-dri-gallium xfce4 xfce4-terminal thunar lightdm lightdm-gtk-greeter lightdm-openrc networkmanager networkmanager-openrc networkmanager-wifi network-manager-applet polkit polkit-elogind python3 librsvg zenity firefox hicolor-icon-theme adwaita-icon-theme font-dejavu ca-certificates"
+          }
+          EOP
+            cat > /work/aports/scripts/genapkovl-skidux.sh <<"EOP"
+          #!/bin/sh
+          set -eu
+          host="$1"
+          temp=$(mktemp -d)
+          trap "rm -rf \"$temp\"" EXIT
+          mkdir -p "$temp/etc/apk" "$temp/etc/runlevels/sysinit" "$temp/etc/runlevels/boot" "$temp/etc/runlevels/default" "$temp/etc/runlevels/shutdown"
+          cp -R /work/overlay/. "$temp/"
+          printf "%s\n" skidux > "$temp/etc/hostname"
+          printf "%s\n" alpine-base alpine-conf doas eudev eudev-openrc elogind elogind-openrc dbus dbus-openrc xorg-server xf86-input-libinput mesa-dri-gallium xfce4 xfce4-terminal thunar lightdm lightdm-gtk-greeter lightdm-openrc networkmanager networkmanager-openrc networkmanager-wifi network-manager-applet polkit polkit-elogind python3 librsvg zenity firefox hicolor-icon-theme adwaita-icon-theme font-dejavu ca-certificates > "$temp/etc/apk/world"
+          printf "%s\n" /media/cdrom/apks https://dl-cdn.alpinelinux.org/alpine/v3.24/main https://dl-cdn.alpinelinux.org/alpine/v3.24/community > "$temp/etc/apk/repositories"
+          for svc in devfs dmesg udev hwdrivers modloop; do ln -sf "/etc/init.d/$svc" "$temp/etc/runlevels/sysinit/$svc"; done
+          for svc in hwclock modules sysctl hostname bootmisc syslog udev-postmount; do ln -sf "/etc/init.d/$svc" "$temp/etc/runlevels/boot/$svc"; done
+          for svc in dbus elogind networkmanager skidux-live-user lightdm; do ln -sf "/etc/init.d/$svc" "$temp/etc/runlevels/default/$svc"; done
+          for svc in mount-ro killprocs savecache; do ln -sf "/etc/init.d/$svc" "$temp/etc/runlevels/shutdown/$svc"; done
+          tar -c -C "$temp" etc usr | gzip -9n > "$host.apkovl.tar.gz"
+          EOP
+            chmod +x /work/aports/scripts/genapkovl-skidux.sh
+            abuild-keygen -a -i -n
+            export PACKAGER_PRIVKEY="$(find /root/.abuild -type f -name "*.rsa" | head -1)"
+            test -n "$PACKAGER_PRIVKEY"
+            cd /work/aports/scripts
+            ./mkimage.sh --tag v3.24 --arch x86_64 --profile skidux --outdir /work/output --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/community
+          '
+      - name: Verify ISO and generate checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s output/SkidUX_LIVE_x86_64.iso
+          file output/SkidUX_LIVE_x86_64.iso
+          sha256sum output/SkidUX_LIVE_x86_64.iso > output/SkidUX_LIVE_x86_64.iso.sha256
+          docker run --rm -v "$PWD/output:/out" alpine:3.24 sh -c 'apk add --no-cache xorriso >/dev/null && xorriso -indev /out/SkidUX_LIVE_x86_64.iso -report_el_torito plain'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SkidUX-LIVE-ISO-Experimental
+          path: output/SkidUX_LIVE_x86_64.iso*
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 7
