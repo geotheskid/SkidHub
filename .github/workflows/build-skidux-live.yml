@@ -183,8 +183,11 @@ jobs:
           tar -c -C "$temp" etc usr | gzip -9n > "$host.apkovl.tar.gz"
           EOP
             chmod +x /work/aports/scripts/genapkovl-skidux.sh
-            abuild-keygen -a -n\n            cp /root/.abuild/*.rsa.pub /etc/apk/keys/
-            export PACKAGER_PRIVKEY="$(find /root/.abuild -type f -name "*.rsa" | head -1)"
+            mkdir -p /root/.abuild
+            openssl genrsa -out /root/.abuild/skidux.rsa 2048
+            openssl rsa -in /root/.abuild/skidux.rsa -pubout -out /root/.abuild/skidux.rsa.pub
+            cp /root/.abuild/skidux.rsa.pub /etc/apk/keys/
+            export PACKAGER_PRIVKEY=/root/.abuild/skidux.rsa
             test -n "$PACKAGER_PRIVKEY"
             cd /work/aports/scripts
             ./mkimage.sh --tag v3.24 --arch x86_64 --profile skidux --outdir /work/output --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/community
