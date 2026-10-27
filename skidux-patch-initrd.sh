@@ -20,7 +20,7 @@ if ! unmkinitramfs "$ORIG" "$DIR" >/dev/null 2>&1; then
  exit 0
 fi
 echo "Plymouth images in source initrd:"
-find "$DIR" -type f -iname '*.png' -path '*/plymouth/*' | head -30 || true
+find "$DIR" -type f -iname '*.png' -path '*/plymouth/*' | sed -n '1,30p' || true
 count=0
 while IFS= read -r source; do
  case "$source" in
@@ -38,6 +38,8 @@ if [ "$count" -eq 0 ]; then
  exit 0
 fi
 cp "$ORIG" "$OUT"
+# xorriso preserves ISO read-only mode; restore owner write bit before appending CPIO.
+chmod u+w "$OUT"
 (
  cd "$OVER"
  find . -print0 | cpio --null --quiet -o -H newc
