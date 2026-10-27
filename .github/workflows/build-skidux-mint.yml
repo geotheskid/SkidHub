@@ -16,13 +16,15 @@ jobs:
           set -euo pipefail
           bash -n build-skidux-mint.sh
           bash -n skidux-system-overhaul.sh
+          bash -n skidux-patch-initrd.sh
           python3 -m py_compile skidux-app.py
           python3 - <<'PY'
-          import base64,pathlib
+          import base64,pathlib,hashlib
           p=pathlib.Path("assets/official-skidux-logo.jpg.b64")
           b=base64.b64decode(p.read_text().strip(),validate=True)
           assert b.startswith(bytes.fromhex("ffd8")), "Missing JPEG SOI"
           assert b.endswith(bytes.fromhex("ffd9")), "Missing JPEG EOI"
+          assert hashlib.sha256(b).hexdigest() == "bf09c35eb8cecdb39f785a1d205241869ea95a6ee9b5244c2346806f943c6a51", "SkidUX logo bytes differ from uploaded master"
           print("SkidUX official logo validated:",len(b),"bytes")
           PY
       - name: Free disk space for Linux Mint image
