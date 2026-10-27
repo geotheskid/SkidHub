@@ -183,14 +183,15 @@ jobs:
           tar -c -C "$temp" etc usr | gzip -9n > "$host.apkovl.tar.gz"
           EOP
             chmod +x /work/aports/scripts/genapkovl-skidux.sh
-            mkdir -p /root/.abuild
-            openssl genrsa -out /root/.abuild/skidux.rsa 2048
-            openssl rsa -in /root/.abuild/skidux.rsa -pubout -out /root/.abuild/skidux.rsa.pub
-            cp /root/.abuild/skidux.rsa.pub /etc/apk/keys/
-            export PACKAGER_PRIVKEY=/root/.abuild/skidux.rsa
-            test -n "$PACKAGER_PRIVKEY"
-            cd /work/aports/scripts
-            ./mkimage.sh --tag v3.24 --arch x86_64 --profile skidux --outdir /work/output --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/community
+            adduser -D -h /home/builder builder
+            addgroup builder abuild || true
+            mkdir -p /home/builder/.abuild /work/output
+            openssl genrsa -out /home/builder/.abuild/skidux.rsa 2048
+            openssl rsa -in /home/builder/.abuild/skidux.rsa -pubout -out /home/builder/.abuild/skidux.rsa.pub
+            cp /home/builder/.abuild/skidux.rsa.pub /etc/apk/keys/
+            chown -R builder:builder /home/builder/.abuild /work/aports /work/output
+            chmod 600 /home/builder/.abuild/skidux.rsa
+            su builder -s /bin/sh -c "cd /work/aports/scripts && PACKAGER_PRIVKEY=/home/builder/.abuild/skidux.rsa ./mkimage.sh --tag v3.24 --arch x86_64 --profile skidux --outdir /work/output --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/community"
           '
       - name: Verify ISO and generate checksum
         shell: bash
