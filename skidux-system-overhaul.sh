@@ -112,6 +112,47 @@ sudo tee "$ROOT/etc/sysctl.d/98-skidux-performance.conf" >/dev/null <<'EOF'
 # Keep kernel VM defaults; favor reusing cached filesystem information.
 vm.vfs_cache_pressure=90
 EOF
+# Compressed RAM swap improves responsiveness on 4GB Lenovo 100w systems under memory pressure.
+# Does not touch physical disks, partition tables or existing swapfiles.
+sudo mkdir -p "$ROOT/etc/systemd/system/multi-user.target.wants" "$ROOT/usr/local/sbin"
+sudo tee "$ROOT/usr/local/sbin/skidux-zram" >/dev/null <<'EOF'
+#!/bin/sh
+set -eu
+[ -r /proc/meminfo ] || exit 0
+command -v zramctl >/dev/null 2>&1 || exit 0
+command -v modprobe >/dev/null 2>&1 || exit 0
+if grep -q '/dev/zram' /proc/swaps 2>/dev/null; then exit 0; fi
+modprobe zram 2>/dev/null || exit 0
+[ -b /dev/zram0 ] || exit 0
+kb=$(awk '/MemTotal:/{print $2}' /proc/meminfo)
+[ -n "$kb" ] || exit 0
+# 40% of real RAM, cap at 2GB compressed swap device.
+bytes=$((kb * 1024 * 40 / 100))
+[ "$bytes" -gt 2147483648 ] && bytes=2147483648
+zramctl /dev/zram0 --algorithm lz4 --size "$bytes" 2>/dev/null || exit 0
+mkswap -q /dev/zram0 2>/dev/null || exit 0
+swapon -p 80 /dev/zram0 2>/dev/null || true
+EOF
+sudo chmod 755 "$ROOT/usr/local/sbin/skidux-zram"
+sudo tee "$ROOT/etc/systemd/system/skidux-zram.service" >/dev/null <<'EOF'
+[Unit]
+Description=SkidUX lightweight compressed-memory swap
+After=systemd-udev-settle.service
+ConditionVirtualization=!container
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/skidux-zram
+TimeoutStartSec=8
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo ln -sfn /etc/systemd/system/skidux-zram.service "$ROOT/etc/systemd/system/multi-user.target.wants/skidux-zram.service"
+# Make sure a real Xorg libinput backend is present before publishing the ISO.
+if ! test -f "$ROOT/usr/lib/xorg/modules/input/libinput_drv.so"; then
+  echo "WARNING: Mint filesystem is missing Xorg libinput. Touchpads cannot be certified." >&2
+fi
+
 # Hide only the welcome tutorial; don't disable updates, accessibility or device services.
 if test -f "$ROOT/etc/xdg/autostart/mintwelcome.desktop"; then
  sudo sed -i '/^Hidden=/d' "$ROOT/etc/xdg/autostart/mintwelcome.desktop"
