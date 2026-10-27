@@ -177,7 +177,7 @@ class Settings:
     def __init__(self):
         self.win=appwin("Settings",800,540);v=vbox();self.win.add(v);v.pack_start(header("SKID SETTINGS","Personalize your SkidUX workspace"),False,False,0)
         v.pack_start(label("Wallpaper"),False,False,0);grid=Gtk.Grid(row_spacing=12,column_spacing=12);v.pack_start(grid,False,False,0)
-        names=["skidux-neon.jpg","skidux-original.jpg","skidux-ocean.jpg","skidux-midnight.jpg","skidux-neon.svg","arctic.svg","violet.svg","cobalt.svg"]
+        names=["skidux-brand.png","skidux-neon.svg","arctic.svg","violet.svg","cobalt.svg"]
         for i,n in enumerate(names):
             grid.attach(btn(n.replace("skidux-","").replace(".jpg","").replace(".svg","").title(),lambda x=n:self.wallpaper(x)),i%4,i//4,1,1)
         v.pack_start(btn("Display Settings",lambda:launch("cinnamon-settings","display")),False,False,0)
